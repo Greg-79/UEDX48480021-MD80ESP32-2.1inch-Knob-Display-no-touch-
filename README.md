@@ -1,2 +1,2 @@
-# UEDX48480021-MD80ESP32-2.1inch-Knob-Display-no-touch-
-UEDX48480021-MD80ESP32-2.1inch-Knob-Display on ESPHOME
+Конфигурация дисплея VIEWESMART UEDX48480021-MD80ESP32-2.1 с энкодером в Esphome.
+Подключение GPIO esp32-s3 согласно даташиту производителя 
