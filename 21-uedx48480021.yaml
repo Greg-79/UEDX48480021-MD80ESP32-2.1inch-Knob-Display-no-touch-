@@ -1,0 +1,376 @@
+# Board: Espressif ESP32-S3-DevKitC-1-N16R8V (16 MB Flash Quad, 8 MB PSRAM Octal)
+
+esphome:
+  name: 21-uedx48480021
+  friendly_name: 21_UEDX48480021
+
+esp32:
+  variant: esp32s3
+  framework:
+    type: esp-idf
+
+logger:
+  level: VERBOSE
+
+api:
+  encryption:
+    key: "nrUlV3Irmr/isY1RimYkEf+1yKH9+QS008cc0JzmvOQ="
+
+ota:
+  - platform: esphome
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+  ap:
+    ssid: 21_UEDX48480021 Fallback Hotspot
+    password: "wbw4IayvldGV"
+
+captive_portal:
+
+psram:
+  mode: octal
+  speed: 80MHz
+
+web_server:
+  version: 3
+
+output:
+  - platform: ledc
+    id: backlight_output
+    pin: GPIO7
+    inverted: true
+    frequency: 150Hz
+
+light:
+  - platform: monochromatic
+    name: Backlight
+    id: display_backlight
+    output: backlight_output
+    restore_mode: ALWAYS_ON
+    default_transition_length: 1s
+    
+globals:
+  - id: arc_value
+    type: int
+    restore_value: no
+    initial_value: '50'
+  - id: last_enc_val
+    type: int
+    restore_value: no
+    initial_value: '0'
+  - id: edit_mode
+    type: bool
+    restore_value: no
+    initial_value: 'false'
+  - id: current_page_idx
+    type: int
+    restore_value: no
+    initial_value: '0'   # 0=spinner, 1=arc, 2=text
+    
+spi:
+  clk_pin:
+    number: GPIO13
+    allow_other_uses: true
+  mosi_pin:
+    number: GPIO12
+    allow_other_uses: true
+  interface: software
+  id: spi_software
+
+display:
+  - platform: mipi_rgb
+    model: custom
+    id: my_display
+    dimensions:
+      width: 480
+      height: 480
+
+    # Тайминги из bsp.c
+    hsync_pulse_width: 10
+    hsync_back_porch: 40
+    hsync_front_porch: 50
+    vsync_pulse_width: 10
+    vsync_back_porch: 40
+    vsync_front_porch: 20
+    pclk_frequency: 16MHz
+    pclk_inverted: true
+
+    pixel_mode: 18bit
+    color_order: BGR
+    invert_colors: true
+
+    # Управляющие пины
+    cs_pin: GPIO18
+    reset_pin: GPIO8
+    de_pin: GPIO17
+    hsync_pin: GPIO46
+    vsync_pin: GPIO3
+    pclk_pin: GPIO9
+
+    # Пины данных
+    data_pins:
+      red:   [GPIO40, GPIO41, GPIO42, GPIO2, GPIO1]
+      green: [GPIO21, GPIO47, GPIO48, GPIO45, GPIO38, GPIO39]
+      blue:
+        - GPIO10
+        - GPIO11
+        - number: GPIO12
+          allow_other_uses: true
+        - number: GPIO13
+          allow_other_uses: true
+        - GPIO14
+
+    # Последовательность инициализации из bsp.c
+    # ВАЖНО: 0x11 и 0x29 добавлены вручную в конце
+    init_sequence:
+      - [0xF0, 0x55, 0xAA, 0x52, 0x08, 0x00]
+      - [0xF6, 0x5A, 0x87]
+      - [0xC1, 0x3F]
+      - [0xCD, 0x25]
+      - [0xC9, 0x10]
+      - [0xF8, 0x8A]
+      - [0xAC, 0x45]
+      - [0xA7, 0x47]
+      - [0xA0, 0xDD]
+      - [0x87, 0x04, 0x03, 0x66]
+      - [0x86, 0x99, 0xA3, 0xA3, 0x51]
+      - [0xFA, 0x08, 0x08, 0x08, 0x04]
+      - [0x9A, 0x8A]
+      - [0x9B, 0x62]
+      - [0x82, 0x48, 0x48]
+      - [0xB1, 0x10]
+      - [0x7A, 0x13, 0x1A]
+      - [0x7B, 0x13, 0x1A]
+      - [0x6D, 0x1E, 0x1E, 0x1E, 0x1E, 0x1E, 0x1E, 0x02, 0x0B, 0x01, 0x00, 0x1F, 0x1E, 0x09, 0x0F, 0x1E, 0x1E, 0x1E, 0x1E, 0x10, 0x0A, 0x1E, 0x1F, 0x00, 0x08, 0x0B, 0x02, 0x1E, 0x1E, 0x1E, 0x1E, 0x1E, 0x1E]
+      - [0x64, 0x18, 0x07, 0x01, 0xE7, 0x03, 0x03, 0x18, 0x06, 0x01, 0xE6, 0x03, 0x03, 0x7A, 0x7A, 0x7A, 0x7A]
+      - [0x65, 0x58, 0x26, 0x18, 0x2C, 0x03, 0x03, 0x58, 0x26, 0x18, 0x2C, 0x03, 0x03, 0x7A, 0x7A, 0x7A, 0x7A]
+      - [0x66, 0x58, 0x26, 0x18, 0x2C, 0x03, 0x03, 0x58, 0x26, 0x18, 0x2C, 0x03, 0x03, 0x7A, 0x7A, 0x7A, 0x7A]
+      - [0x67, 0x18, 0x05, 0x01, 0xE5, 0x03, 0x03, 0x18, 0x04, 0x01, 0xE4, 0x03, 0x03, 0x7A, 0x7A, 0x7A, 0x7A]
+      - [0x60, 0x18, 0x09, 0x7A, 0x7A, 0x51, 0xF1, 0x7A, 0x7A]
+      - [0x63, 0x51, 0xF1, 0x7A, 0x7A, 0x18, 0x08, 0x7A, 0x7A]
+      - [0xD1, 0x00, 0x00, 0x00, 0x0E, 0x00, 0x31, 0x00, 0x4E, 0x00, 0x67, 0x00, 0x92, 0x00, 0xB5, 0x00, 0xED, 0x01, 0x1C, 0x01, 0x66, 0x01, 0xA4, 0x02, 0x04, 0x02, 0x53, 0x02, 0x56, 0x02, 0x9F, 0x02, 0xF3, 0x03, 0x29, 0x03, 0x73, 0x03, 0xA1, 0x03, 0xB9, 0x03, 0xC8, 0x03, 0xDB, 0x03, 0xE7, 0x03, 0xF4, 0x03, 0xFB, 0x03, 0xFF]
+      - [0xD2, 0x00, 0x00, 0x00, 0x0E, 0x00, 0x31, 0x00, 0x4E, 0x00, 0x67, 0x00, 0x92, 0x00, 0xB5, 0x00, 0xED, 0x01, 0x1C, 0x01, 0x66, 0x01, 0xA4, 0x02, 0x04, 0x02, 0x53, 0x02, 0x56, 0x02, 0x9F, 0x02, 0xF3, 0x03, 0x29, 0x03, 0x73, 0x03, 0xA1, 0x03, 0xB9, 0x03, 0xC8, 0x03, 0xDB, 0x03, 0xE7, 0x03, 0xF4, 0x03, 0xFB, 0x03, 0xFF]
+      - [0xD3, 0x00, 0x00, 0x00, 0x0E, 0x00, 0x31, 0x00, 0x4E, 0x00, 0x67, 0x00, 0x92, 0x00, 0xB5, 0x00, 0xED, 0x01, 0x1C, 0x01, 0x66, 0x01, 0xA4, 0x02, 0x04, 0x02, 0x53, 0x02, 0x56, 0x02, 0x9F, 0x02, 0xF3, 0x03, 0x29, 0x03, 0x73, 0x03, 0xA1, 0x03, 0xB9, 0x03, 0xC8, 0x03, 0xDB, 0x03, 0xE7, 0x03, 0xF4, 0x03, 0xFB, 0x03, 0xFF]
+      - [0xD4, 0x00, 0x00, 0x00, 0x0E, 0x00, 0x31, 0x00, 0x4E, 0x00, 0x67, 0x00, 0x92, 0x00, 0xB5, 0x00, 0xED, 0x01, 0x1C, 0x01, 0x66, 0x01, 0xA4, 0x02, 0x04, 0x02, 0x53, 0x02, 0x56, 0x02, 0x9F, 0x02, 0xF3, 0x03, 0x29, 0x03, 0x73, 0x03, 0xA1, 0x03, 0xB9, 0x03, 0xC8, 0x03, 0xDB, 0x03, 0xE7, 0x03, 0xF4, 0x03, 0xFB, 0x03, 0xFF]
+      - [0xD5, 0x00, 0x00, 0x00, 0x0E, 0x00, 0x31, 0x00, 0x4E, 0x00, 0x67, 0x00, 0x92, 0x00, 0xB5, 0x00, 0xED, 0x01, 0x1C, 0x01, 0x66, 0x01, 0xA4, 0x02, 0x04, 0x02, 0x53, 0x02, 0x56, 0x02, 0x9F, 0x02, 0xF3, 0x03, 0x29, 0x03, 0x73, 0x03, 0xA1, 0x03, 0xB9, 0x03, 0xC8, 0x03, 0xDB, 0x03, 0xE7, 0x03, 0xF4, 0x03, 0xFB, 0x03, 0xFF]
+      - [0xD6, 0x00, 0x00, 0x00, 0x0E, 0x00, 0x31, 0x00, 0x4E, 0x00, 0x67, 0x00, 0x92, 0x00, 0xB5, 0x00, 0xED, 0x01, 0x1C, 0x01, 0x66, 0x01, 0xA4, 0x02, 0x04, 0x02, 0x53, 0x02, 0x56, 0x02, 0x9F, 0x02, 0xF3, 0x03, 0x29, 0x03, 0x73, 0x03, 0xA1, 0x03, 0xB9, 0x03, 0xC8, 0x03, 0xDB, 0x03, 0xE7, 0x03, 0xF4, 0x03, 0xFB, 0x03, 0xFF]
+      - [0x11]
+      - delay 120ms
+      - [0x29]
+      - delay 20ms
+
+#    lambda: |-
+#      auto black = Color(0, 0, 0);
+#      auto red = Color(255, 0, 0);
+#      auto green = Color(0, 255, 0);
+#      auto blue = Color(0, 0, 255);
+#      auto white = Color(255, 255, 255);
+#      it.circle(240, 240, 100, red);
+#      it.filled_circle(240, 240, 15, red);
+#      it.filled_circle(260, 240, 15, green);
+#      it.filled_circle(280, 240, 15, blue);
+#      it.filled_circle(300, 240, 15, white);
+
+# LVGL
+lvgl:
+  displays:
+    - my_display
+  buffer_size: 20%
+  bg_color: 0x000000
+  scrollable: false
+  page_wrap: true
+  pages:
+
+    # ---------------- Страница 1: Spinners ----------------
+    - id: page_spinners
+      widgets:
+        - obj:
+            id: boot_screen
+            x: 0
+            y: 0
+            width: 480
+            height: 480
+            radius: 0
+            pad_all: 0
+            border_width: 0
+            widgets:
+              - spinner:
+                  align: center
+                  width: 150
+                  height: 150
+                  arc_width: 20
+                  bg_color: 0x000000
+                  arc_opa: TRANSP
+                  spin_time: 4s
+                  arc_length: 110deg
+                  id: spinner_id
+                  indicator:
+                    arc_color: 0xaaaaff
+                    arc_rounded: false
+              - spinner:
+                  align: center
+                  width: 100
+                  height: 100
+                  arc_width: 20
+                  bg_color: 0x000000
+                  arc_opa: TRANSP
+                  spin_time: 3s
+                  arc_length: 90deg
+                  id: spinner_id2
+                  indicator:
+                    arc_color: 0xaaff00
+                    arc_rounded: false
+                  on_press:
+                    - lvgl.page.next:
+    - id: page_arc
+      widgets:
+        - arc:
+            id: page2_arc
+            align: center
+            width: 400
+            height: 400
+            min_value: 0
+            max_value: 100
+            value: 50
+            bg_opa: 0%
+            arc_width: 20
+            arc_color: 0xFF2222
+            indicator:
+              arc_color: 0xFF0000
+              arc_width: 20
+            knob:
+              bg_color: 0xFFFFFF
+              pad_all: 8
+        - label:
+            id: page2_value
+            align: center
+            text: "50"
+            text_color: 0xFFFFFF
+            text_font: font_48
+
+    # ---------------- Страница 3: Text ----------------
+    - id: page_text
+      widgets:
+        - label:
+            align: center
+            text: "Хорошего отдыха"
+            text_color: 0x00FF00
+            text_font: font_52
+
+# --- Кнопка ---
+binary_sensor:
+  - platform: gpio
+    name: "SW_KEY"
+    pin:
+      number: GPIO0
+      inverted: false
+      mode:
+        input: true
+        pullup: true
+    id: button_1
+    device_class: power
+    filters:
+      - delayed_on: 30ms
+      - delayed_off: 30ms
+    on_press:
+      then:
+        - lambda: |-
+            if (id(current_page_idx) == 1) {
+              id(edit_mode) = !id(edit_mode);
+              ESP_LOGI("main", "Edit mode: %s", id(edit_mode) ? "ON" : "OFF");
+            }
+
+# --- Энкодер ---
+sensor:
+  - platform: rotary_encoder
+    name: "Rotary Encoder"
+    id: rotary
+    pin_a:
+      number: GPIO6
+      mode:
+        input: true
+        pullup: true
+    pin_b:
+      number: GPIO5
+      mode:
+        input: true
+        pullup: true
+    min_value: -10000
+    max_value: 10000
+    resolution: 1
+    filters:
+      - debounce: 0.15s
+    on_value:
+      then:
+        # 1. Обновляем переменные состояния
+        - lambda: |-
+            static uint32_t last_change = 0;
+            uint32_t now = millis();
+            int cur = id(rotary).state;
+            int delta = cur - id(last_enc_val);
+            id(last_enc_val) = cur;
+
+            // Антидребезг по времени
+            if (delta == 0) return;
+            if (now - last_change < 120) return;
+            last_change = now;
+
+            if (id(edit_mode)) {
+              // Режим редактирования: меняем arc_value шагами по 2
+              int v = id(arc_value) + (delta > 0 ? 2 : -2);
+              if (v < 0) v = 0;
+              if (v > 100) v = 100;
+              id(arc_value) = v;
+            } else {
+              // Режим навигации: переключаем страницы
+              if (delta > 0) {
+                id(current_page_idx) = (id(current_page_idx) + 1) % 3;
+              } else {
+                id(current_page_idx) = (id(current_page_idx) + 2) % 3;
+              }
+            }
+
+        # 2. Если в режиме редактирования — обновляем arc и label
+        - if:
+            condition:
+              lambda: 'return id(edit_mode);'
+            then:
+              - lvgl.arc.update:
+                  id: page2_arc
+                  value: !lambda 'return id(arc_value);'
+              - lvgl.label.update:
+                  id: page2_value
+                  text: !lambda 'return std::to_string(id(arc_value)).c_str();'
+
+        # 3. Переключение страниц (только если не в режиме редактирования)
+        - if:
+            condition:
+              lambda: 'return !id(edit_mode) && id(current_page_idx) == 0;'
+            then:
+              - lvgl.page.show: page_spinners
+        - if:
+            condition:
+              lambda: 'return !id(edit_mode) && id(current_page_idx) == 1;'
+            then:
+              - lvgl.page.show: page_arc
+        - if:
+            condition:
+              lambda: 'return !id(edit_mode) && id(current_page_idx) == 2;'
+            then:
+              - lvgl.page.show: page_text
+font:
+  - file: "gfonts://Roboto"
+    id: font_20
+    size: 20
+  - file: "display/fonts/Roboto-Regular.ttf"
+    id: font_52
+    size: 50
+    glyphs: |-
+      !"%()+=,-_.:³°<>μ0123456789АБВГДЕЁЖЗИЙКЛМНОПРСТУФХЦЧШЩЬЫЪЭЮЯABCDEFGHIJKLMNOPQRSTUVWXYZ абвгдеёжзийклмнопрстуфхцчшщьыъэюяabcdefghijklmnopqrstuvwxyz'/
+
+  - file: "display/fonts/Roboto-Regular.ttf"
+    id: font_48
+    size: 48
+    glyphs: |-
+      !"%()+=,-_.:³°<>μ0123456789АБВГДЕЁЖЗИЙКЛМНОПРСТУФХЦЧЩЬЫЪЭЮЯABCDEFGHIJKLMNOPQRSTUVWXYZ абвгдеёжзийклмнопрстуфхцчщьыъэюяabcdefghijklmnopqrstuvwxyz'/
